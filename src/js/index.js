@@ -1,22 +1,30 @@
 class Tetris {
-
     constructor() {
         this.canvas = document.querySelector("canvas");
         this.ctx = this.canvas.getContext("2d");
 
-        this.totalScore = 0
-        this.linesScore = 0
-        this.startTine = Date.now()
+        this.totalScore = 0;
+        this.linesScore = 0;
+        this.startTime = Date.now();
 
-        this.nextFiguresContainer = document.getElementById('next-figures-contianer')
-        this.scoreCounterElement = document.getElementById('score-counter')
-        this.linesCounterElement = document.getElementById('lines-counter')
-        this.timeCounterElement = document.getElementById('time-counter')
+        this.nextFiguresContainer = document.getElementById("next-figures-contianer");
+        this.scoreCounterElement = document.getElementById("score-counter");
+        this.linesCounterElement = document.getElementById("lines-counter");
+        this.timeCounterElement = document.getElementById("time-counter");
+        this.speetInputElement = document.getElementById("speed-input");
 
-        this.startButtonElement = document.getElementById('start-button')
-        this.startButtonElement.addEventListener('click', this.startButtonHandler.bind(this))
+        this.startButtonElement = document.getElementById("start-button");
+        this.startButtonElement.addEventListener("click", this.startButtonHandler.bind(this));
 
-        this.figurePull = [this.getRandomFigureName(), this.getRandomFigureName(), this.getRandomFigureName(), this.getRandomFigureName(), this.getRandomFigureName()]
+        this.drawInterval = undefined;
+
+        this.figurePull = [
+            this.getRandomFigureName(),
+            this.getRandomFigureName(),
+            this.getRandomFigureName(),
+            this.getRandomFigureName(),
+            this.getRandomFigureName(),
+        ];
         this.icons = {
             invL: '<img src="./png/invL.png" alt="invL" id="invL-icon-template">',
             invZ: '<img src="./png/invZ.png" alt="invZ" id="invZ-icon-template">',
@@ -24,14 +32,12 @@ class Tetris {
             line: '<img src="./png/line.png" alt="line" id="line-icon-template">',
             rect: '<img src="./png/rect.png" alt="rect" id="rect-icon-template">',
             T: '<img src="./png/T.png" alt="T" id="T-icon-template">',
-            Z: '<img src="./png/Z.png" alt="Z" id="Z-icon-template">'
-        }
+            Z: '<img src="./png/Z.png" alt="Z" id="Z-icon-template">',
+        };
         // for (let fig in this.icons) {
         //     this.icons[fig].src = `./png/${fig}.png`
         // }
-        this.nextFiguresContainer.innerHTML = this.figurePull.map(Fig => this.icons[Fig]).join('')
-
-        this.timer = undefined
+        this.nextFiguresContainer.innerHTML = this.figurePull.map((Fig) => this.icons[Fig]).join("");
 
         this.createField();
         this.drawTetris();
@@ -60,6 +66,7 @@ class Tetris {
             this.type = type;
             this.isFalling = true;
             this.rotate = 0;
+            const moveIntervalTime = [0, 700, 1000, 1700][+this.game.speetInputElement.value];
             this.color = {
                 line: "blue",
                 Z: "pink",
@@ -69,32 +76,32 @@ class Tetris {
                 rect: "red",
                 T: "yellow",
             }[this.type];
-            this.zeroPointCoords = this.type === 'line' ? { x: 4, y: 2 } : { x: 4, y: 1 };
+            this.zeroPointCoords = this.type === "line" ? { x: 4, y: 2 } : { x: 4, y: 1 };
             this.listnersParams = [
                 { key: "upKey", func: () => this.rotateFigure() },
-                { key: 'downKey', func: () => this.moveDown() },
-                { key: 'leftKey', func: () => this.moveLeft() },
-                { key: 'rightKey', func: () => this.moveRight() },
-            ]
-            this.listnersParams.forEach(Params => document.addEventListener(Params.key, Params.func))
+                { key: "downKey", func: () => this.moveDown() },
+                { key: "leftKey", func: () => this.moveLeft() },
+                { key: "rightKey", func: () => this.moveRight() },
+            ];
+            this.listnersParams.forEach((Params) => document.addEventListener(Params.key, Params.func));
             this.updateChildren();
-            console.log(type)
+            this.moveInterval = setInterval(() => this.moveDown(), moveIntervalTime);
         }
 
         rotateFigure() {
-            const oldRotate = this.rotate
+            const oldRotate = this.rotate;
             this.rotate = (this.rotate + 1) % 4;
             try {
-                let children = this.getChildren()
-                if (!children.every(Child => Child.contain === false || Child.contain.isFalling === true)) this.rotate = oldRotate
+                let children = this.getChildren();
+                if (!children.every((Child) => Child.contain === false || Child.contain.isFalling === true)) this.rotate = oldRotate;
             } catch (error) {
-                this.rotate = oldRotate
+                this.rotate = oldRotate;
             }
             this.updateChildren();
         }
 
         updateChildren() {
-            this.children = this.getChildren()
+            this.children = this.getChildren();
             this.game.clearFallingFigure();
             this.children.forEach((Child) => {
                 Child.contain = this;
@@ -104,22 +111,23 @@ class Tetris {
         }
 
         setStatic() {
-            if (!this.children.every(Child => Child.y !== 1)) {
-                document.dispatchEvent(new Event('GameOver'))
+            if (!this.children.every((Child) => Child.y !== 1)) {
+                document.dispatchEvent(new Event("GameOver"));
             }
             {
-                const { func, key } = this.listnersParams[0]
-                document.removeEventListener(key, func)
+                const { func, key } = this.listnersParams[0];
+                document.removeEventListener(key, func);
             }
             {
-                const { func, key } = this.listnersParams[1]
-                document.removeEventListener(key, func)
+                const { func, key } = this.listnersParams[1];
+                document.removeEventListener(key, func);
             }
-            this.listnersParams.forEach(Params => document.removeEventListener(Params.key, Params.func))
-            delete this.game, this.field, this.type, this.zeroPointCoords, this.rotate, this.listnersParams;
+            clearInterval(this.moveInterval);
+            this.listnersParams.forEach((Params) => document.removeEventListener(Params.key, Params.func));
+            delete this.game, this.field, this.type, this.zeroPointCoords, this.rotate, this.listnersParams, this.moveInterval;
             delete this.updateChildren, this.moveDown, this.moveLeft, this.moveRight, this.setStatic, this.rotateFigure;
             this.isFalling = false;
-            document.dispatchEvent(new Event('FigureFell'))
+            document.dispatchEvent(new Event("FigureFell"));
         }
 
         getChildren() {
@@ -127,40 +135,96 @@ class Tetris {
             this.zeroCell = this.field[`${x}:${y}`];
             const cell = this.zeroCell;
 
-            if (this.type === 'line' && this.rotate === 0) { return [cell.up, cell, cell.down, cell.down.down] }
-            if (this.type === 'line' && this.rotate === 1) { return [cell.left.left, cell.left, cell, cell.right] }
-            if (this.type === 'line' && this.rotate === 2) { return [cell.up, cell, cell.down, cell.down.down] }
-            if (this.type === 'line' && this.rotate === 3) { return [cell.left.left, cell.left, cell, cell.right] }
+            if (this.type === "line" && this.rotate === 0) {
+                return [cell.up, cell, cell.down, cell.down.down];
+            }
+            if (this.type === "line" && this.rotate === 1) {
+                return [cell.left.left, cell.left, cell, cell.right];
+            }
+            if (this.type === "line" && this.rotate === 2) {
+                return [cell.up, cell, cell.down, cell.down.down];
+            }
+            if (this.type === "line" && this.rotate === 3) {
+                return [cell.left.left, cell.left, cell, cell.right];
+            }
 
-            if (this.type === 'Z' && this.rotate === 0) { return [cell.left, cell, cell.down, cell.down.right] }
-            if (this.type === 'Z' && this.rotate === 1) { return [cell.right.up, cell.right, cell, cell.down] }
-            if (this.type === 'Z' && this.rotate === 2) { return [cell.left, cell, cell.down, cell.down.right] }
-            if (this.type === 'Z' && this.rotate === 3) { return [cell.right.up, cell.right, cell, cell.down] }
+            if (this.type === "Z" && this.rotate === 0) {
+                return [cell.left, cell, cell.down, cell.down.right];
+            }
+            if (this.type === "Z" && this.rotate === 1) {
+                return [cell.right.up, cell.right, cell, cell.down];
+            }
+            if (this.type === "Z" && this.rotate === 2) {
+                return [cell.left, cell, cell.down, cell.down.right];
+            }
+            if (this.type === "Z" && this.rotate === 3) {
+                return [cell.right.up, cell.right, cell, cell.down];
+            }
 
-            if (this.type === 'invZ' && this.rotate === 0) { return [cell.down.left, cell.down, cell, cell.right] }
-            if (this.type === 'invZ' && this.rotate === 1) { return [cell.up, cell, cell.right, cell.right.down] }
-            if (this.type === 'invZ' && this.rotate === 2) { return [cell.down.left, cell.down, cell, cell.right] }
-            if (this.type === 'invZ' && this.rotate === 3) { return [cell.up, cell, cell.right, cell.right.down] }
+            if (this.type === "invZ" && this.rotate === 0) {
+                return [cell.down.left, cell.down, cell, cell.right];
+            }
+            if (this.type === "invZ" && this.rotate === 1) {
+                return [cell.up, cell, cell.right, cell.right.down];
+            }
+            if (this.type === "invZ" && this.rotate === 2) {
+                return [cell.down.left, cell.down, cell, cell.right];
+            }
+            if (this.type === "invZ" && this.rotate === 3) {
+                return [cell.up, cell, cell.right, cell.right.down];
+            }
 
-            if (this.type === 'L' && this.rotate === 0) { return [cell.left.down, cell.left, cell, cell.right] }
-            if (this.type === 'L' && this.rotate === 1) { return [cell.up.left, cell.up, cell, cell.down] }
-            if (this.type === 'L' && this.rotate === 2) { return [cell.left, cell, cell.right, cell.right.up] }
-            if (this.type === 'L' && this.rotate === 3) { return [cell.up, cell, cell.down, cell.down.right] }
+            if (this.type === "L" && this.rotate === 0) {
+                return [cell.left.down, cell.left, cell, cell.right];
+            }
+            if (this.type === "L" && this.rotate === 1) {
+                return [cell.up.left, cell.up, cell, cell.down];
+            }
+            if (this.type === "L" && this.rotate === 2) {
+                return [cell.left, cell, cell.right, cell.right.up];
+            }
+            if (this.type === "L" && this.rotate === 3) {
+                return [cell.up, cell, cell.down, cell.down.right];
+            }
 
-            if (this.type === 'invL' && this.rotate === 0) { return [cell.left, cell, cell.right, cell.right.down] }
-            if (this.type === 'invL' && this.rotate === 1) { return [cell.up, cell, cell.down, cell.down.left] }
-            if (this.type === 'invL' && this.rotate === 2) { return [cell.left.up, cell.left, cell, cell.right] }
-            if (this.type === 'invL' && this.rotate === 3) { return [cell.up.right, cell.up, cell, cell.down] }
+            if (this.type === "invL" && this.rotate === 0) {
+                return [cell.left, cell, cell.right, cell.right.down];
+            }
+            if (this.type === "invL" && this.rotate === 1) {
+                return [cell.up, cell, cell.down, cell.down.left];
+            }
+            if (this.type === "invL" && this.rotate === 2) {
+                return [cell.left.up, cell.left, cell, cell.right];
+            }
+            if (this.type === "invL" && this.rotate === 3) {
+                return [cell.up.right, cell.up, cell, cell.down];
+            }
 
-            if (this.type === 'rect' && this.rotate === 0) { return [cell, cell.right, cell.down, cell.down.right] }
-            if (this.type === 'rect' && this.rotate === 1) { return [cell, cell.right, cell.down, cell.down.right] }
-            if (this.type === 'rect' && this.rotate === 2) { return [cell, cell.right, cell.down, cell.down.right] }
-            if (this.type === 'rect' && this.rotate === 3) { return [cell, cell.right, cell.down, cell.down.right] }
+            if (this.type === "rect" && this.rotate === 0) {
+                return [cell, cell.right, cell.down, cell.down.right];
+            }
+            if (this.type === "rect" && this.rotate === 1) {
+                return [cell, cell.right, cell.down, cell.down.right];
+            }
+            if (this.type === "rect" && this.rotate === 2) {
+                return [cell, cell.right, cell.down, cell.down.right];
+            }
+            if (this.type === "rect" && this.rotate === 3) {
+                return [cell, cell.right, cell.down, cell.down.right];
+            }
 
-            if (this.type === 'T' && this.rotate === 0) { return [cell.down, cell.left, cell, cell.right] }
-            if (this.type === 'T' && this.rotate === 1) { return [cell.up, cell, cell.down, cell.left] }
-            if (this.type === 'T' && this.rotate === 2) { return [cell.up, cell.left, cell, cell.right] }
-            if (this.type === 'T' && this.rotate === 3) { return [cell.up, cell, cell.down, cell.right] }
+            if (this.type === "T" && this.rotate === 0) {
+                return [cell.down, cell.left, cell, cell.right];
+            }
+            if (this.type === "T" && this.rotate === 1) {
+                return [cell.up, cell, cell.down, cell.left];
+            }
+            if (this.type === "T" && this.rotate === 2) {
+                return [cell.up, cell.left, cell, cell.right];
+            }
+            if (this.type === "T" && this.rotate === 3) {
+                return [cell.up, cell, cell.down, cell.right];
+            }
         }
 
         isCollised() {
@@ -192,114 +256,114 @@ class Tetris {
 
     startButtonHandler() {
         const params1 = {
-            key: 'FigureFell',
+            key: "FigureFell",
             func: () => {
-                this.desroyLines()
-                this.spawnFigure(this.figurePull.shift())
-                this.figurePull.push(this.getRandomFigureName())
-            }
-        }
+                this.desroyLines();
+                this.spawnFigure(this.figurePull.shift());
+                this.figurePull.push(this.getRandomFigureName());
+            },
+        };
 
-        this.timer = setTimeout(() => {
-            this.fallingFigure.moveDown()
-        },)
+        this.startTime = Date.now();
+        this.linesScore = 0;
+        this.totalScore = 0;
 
-        this.startTine = Date.now()
-        this.linesScore = 0
-        this.totalScore = 0
+        this.startButtonElement.style.color = "gray";
+        this.startButtonElement.style.cursor = "not-allowed";
+        this.createField();
 
-        this.startButtonElement.style.color = 'gray'
-        this.startButtonElement.style.cursor = 'not-allowed'
+        this.figurePull.push(this.getRandomFigureName());
+        this.spawnFigure(this.figurePull.shift());
 
-        this.figurePull.push(this.getRandomFigureName())
-        this.spawnFigure(this.figurePull.shift())
+        this.drawInterval = setInterval(() => this.drawTetris(), 500);
 
         const params2 = {
-            key: 'GameOver',
+            key: "GameOver",
             func: () => {
-                document.removeEventListener(params1.key, params1.func)
-                document.removeEventListener(params2.key, params2.func)
-                this.startButtonElement.style.color = 'black'
-                this.startButtonElement.style.cursor = 'pointer'
-            }
-        }
-        document.addEventListener(params2.key, params2.func)
-        document.addEventListener(params1.key, params1.func)
+                document.removeEventListener(params1.key, params1.func);
+                document.removeEventListener(params2.key, params2.func);
+                this.startButtonElement.style.color = "black";
+                this.startButtonElement.style.cursor = "pointer";
+                clearInterval(this.drawInterval);
+            },
+        };
+        document.addEventListener(params2.key, params2.func);
+        document.addEventListener(params1.key, params1.func);
     }
 
     spawnFigure(type) {
         this.fallingFigure = new this.Figure(this, type);
-        this.nextFiguresContainer.innerHTML = this.figurePull.map(Fig => this.icons[Fig]).join('')
+        this.nextFiguresContainer.innerHTML = this.figurePull.map((Fig) => this.icons[Fig]).join("");
     }
 
     desroyLines() {
-        let fillLinies = []
+        let fillLinies = [];
         for (let y = 20; y >= 1; y--) {
-            if (this.isLineFill(y)) fillLinies.push(y)
+            if (this.isLineFill(y)) fillLinies.push(y);
         }
 
         for (let y of fillLinies) {
-            this.clearLine(y)
+            this.clearLine(y);
         }
 
-        this.linesScore += fillLinies.length
-        this.totalScore += [0, 100, 300, 700, 1500][fillLinies.length]
+        this.linesScore += fillLinies.length;
+        this.totalScore += [0, 100, 300, 700, 1500][fillLinies.length];
 
         whle: while (true) {
-            let isRepalced = false
+            let isRepalced = false;
             fr: for (let Y = 19; Y >= 1; Y--) {
                 if (this.isLineEmpty(Y + 1) && !this.isLineEmpty(Y)) {
-                    this.replaceLines(Y, Y + 1)
-                    isRepalced = true
-                    continue whle
+                    this.replaceLines(Y, Y + 1);
+                    isRepalced = true;
+                    continue whle;
                 }
             }
-            if (!isRepalced) break whle
+            if (!isRepalced) break whle;
         }
-        this.drawTetris()
+        this.drawTetris();
     }
 
     clearLine(y) {
-        let Cell = this.field[`${1}:${y}`]
+        let Cell = this.field[`${1}:${y}`];
         while (Cell.right) {
-            Cell.contain = false
-            Cell = Cell.right
+            Cell.contain = false;
+            Cell = Cell.right;
         }
-        Cell.contain = false
+        Cell.contain = false;
     }
 
     isLineFill(y) {
-        let Cell = this.field[`${1}:${y}`]
+        let Cell = this.field[`${1}:${y}`];
         while (Cell.right) {
-            if (Cell.contain === false) return false
-            Cell = Cell.right
+            if (Cell.contain === false) return false;
+            Cell = Cell.right;
         }
-        return Cell.contain !== false
+        return Cell.contain !== false;
     }
 
     isLineEmpty(y) {
-        let Cell = this.field[`${1}:${y}`]
+        let Cell = this.field[`${1}:${y}`];
         while (Cell.right) {
-            if (Cell.contain !== false) return false
-            Cell = Cell.right
+            if (Cell.contain !== false) return false;
+            Cell = Cell.right;
         }
-        return Cell.contain === false
+        return Cell.contain === false;
     }
 
     replaceLines(y1, y2) {
-        console.log(`y1 = ${y1}, y2 = ${y2}`)
-        let Cell1 = this.field[`1:${y1}`]
-        let Cell2 = this.field[`1:${y2}`]
+        console.log(`y1 = ${y1}, y2 = ${y2}`);
+        let Cell1 = this.field[`1:${y1}`];
+        let Cell2 = this.field[`1:${y2}`];
         while (Cell1.right) {
-            const temp = Cell1.contain
-            Cell1.contain = Cell2.contain
-            Cell2.contain = temp
-            Cell1 = Cell1.right
-            Cell2 = Cell2.right
+            const temp = Cell1.contain;
+            Cell1.contain = Cell2.contain;
+            Cell2.contain = temp;
+            Cell1 = Cell1.right;
+            Cell2 = Cell2.right;
         }
-        const temp = Cell1.contain
-        Cell1.contain = Cell2.contain
-        Cell2.contain = temp
+        const temp = Cell1.contain;
+        Cell1.contain = Cell2.contain;
+        Cell2.contain = temp;
     }
 
     clearFallingFigure() {
@@ -316,7 +380,7 @@ class Tetris {
     }
 
     getRandomFigureName() {
-        return ['T', 'rect', 'invL', 'L', 'invZ', 'Z', 'line'][Math.trunc(Math.random() * 7)]
+        return ["T", "rect", "invL", "L", "invZ", "Z", "line"][Math.trunc(Math.random() * 7)];
     }
 
     createField() {
@@ -342,10 +406,11 @@ class Tetris {
     }
 
     getTimeCount() {
-        const timeLeft = new Date(Date.now() - this.startTine)
-        const hours = String(timeLeft.getHours()).padStart(2, '0'); // Получаем часы и добавляем ведущий ноль при необходимости
-        const minutes = String(timeLeft.getMinutes()).padStart(2, '0'); // Получаем минуты и добавляем ведущий ноль при необходимости
-        const seconds = String(timeLeft.getSeconds()).padStart(2, '0'); // Получаем секунды и добавляем ведущий ноль при необходимости
+        const timeDifference = Date.now() - this.startTime;
+        const hours = String(Math.floor(timeDifference / (1000 * 60 * 60))).padStart(2, "0");
+        const minutes = String(Math.floor((timeDifference % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, "0");
+        const seconds = String(Math.floor((timeDifference % (1000 * 60)) / 1000)).padStart(2, "0");
+
         return `${hours}:${minutes}:${seconds}`;
     }
 
@@ -353,9 +418,9 @@ class Tetris {
         const w = 40;
         this.ctx.clearRect(0, 0, 400, 800);
 
-        this.linesCounterElement.innerText = this.linesScore
-        this.scoreCounterElement.innerText = this.totalScore
-        this.timeCounterElement.innerText = this.getTimeCount()
+        this.linesCounterElement.innerText = this.linesScore;
+        this.scoreCounterElement.innerText = this.totalScore;
+        this.timeCounterElement.innerText = this.getTimeCount();
         for (let x = 1; x <= 10; x++) {
             for (let y = 1; y <= 20; y++) {
                 const cell = this.field[`${x}:${y}`];
